@@ -1577,12 +1577,11 @@ class AgentRuntime:
         # Submit to enrichment pool so it doesn't compete with API executor.
         def _write_audit():
             try:
-                import json as _json
                 raw_client = self.backend.client if hasattr(self.backend, 'client') else self.backend
                 collection = self.backend.collection if hasattr(self.backend, 'collection') else 'agent_memory'
                 raw_client.add_node(
                     name=f"audit:{self.agent_id}:{ts}:decision",
-                    data=_json.dumps(decision_data, default=str),
+                    data=json.dumps(decision_data, default=str),
                     collection=collection,
                 )
             except Exception as e:

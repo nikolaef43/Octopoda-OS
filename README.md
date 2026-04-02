@@ -44,22 +44,20 @@ AI agents forget everything between sessions. Every framework treats memory as d
 
 ### How It Compares
 
-| | Octopoda | Mem0 | Zep | LangChain Memory | Raw Vector DB |
-|---|---|---|---|---|---|
-| **Open source** | Yes (MIT) | No | Partial | Yes | Yes |
-| **Local-first** | Yes | No (cloud) | No | No | N/A |
-| **Loop detection** | Yes (5-signal) | No | No | No | No |
-| **Agent messaging** | Yes | No | No | No | No |
-| **Knowledge graph** | Yes | No | No | No | No |
-| **Temporal versioning** | Yes | No | No | No | No |
-| **Memory health scoring** | Yes | No | No | No | No |
-| **Goal tracking** | Yes | No | No | No | No |
-| **Export/import** | Yes | No | No | No | No |
-| **Crash recovery** | Yes | N/A | No | No | No |
-| **Cross-agent sharing** | Yes | Limited | Limited | No | No |
-| **MCP server** | Yes (20+ tools) | No | No | No | No |
-| **Framework integrations** | LangChain, CrewAI, AutoGen, OpenAI | Some | Some | Own only | None |
-| **Pricing** | Free (open core) | Per API call | Flat monthly | Free (basic) | Self-managed |
+| | Octopoda | Mem0 | Zep | LangChain Memory |
+|---|---|---|---|---|
+| **Open source** | MIT | Apache 2.0 | Partial (CE) | MIT |
+| **Local-first** | Yes (SQLite) | Cloud-first | Cloud-first | In-process |
+| **Loop detection** | 5-signal engine | No | No | No |
+| **Agent messaging** | Built-in | No | No | No |
+| **Temporal versioning** | Full history | No | No | No |
+| **Crash recovery** | Snapshots + restore | N/A | No | No |
+| **Cross-agent sharing** | Shared memory bus | No | No | No |
+| **MCP server** | 25 tools | No | No | No |
+| **Knowledge graph** | spaCy NER | No | No | No |
+| **Semantic search** | Local embeddings | Cloud embeddings | Cloud embeddings | Needs vector DB |
+| **Framework integrations** | LangChain, CrewAI, AutoGen, OpenAI | LangChain | LangChain | Own only |
+| **Pricing** | Free (open core) | Free + paid | Free CE + paid | Free |
 
 ---
 
