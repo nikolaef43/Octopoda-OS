@@ -526,7 +526,7 @@ except ImportError:
     fcntl = None  # Not available on Windows; file locking skipped
 # json imported at top of file
 
-_VERIFY_CODE_TTL = 600  # 10 minutes
+_VERIFY_CODE_TTL = 1800  # 30 minutes
 _MAX_VERIFY_ATTEMPTS = 5
 _VERIFY_FILE = os.environ.get("OCTOPODA_VERIFY_FILE", "/var/lib/octopoda/verification_codes.json")
 
@@ -544,14 +544,15 @@ def _load_verify_codes() -> dict:
 
 def _save_verify_codes(codes: dict):
     try:
+        os.makedirs(os.path.dirname(_VERIFY_FILE), exist_ok=True)
         with open(_VERIFY_FILE, "w") as f:
             if fcntl:
                 fcntl.flock(f, fcntl.LOCK_EX)
             json.dump(codes, f)
             if fcntl:
                 fcntl.flock(f, fcntl.LOCK_UN)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error("Failed to save verification codes to %s: %s", _VERIFY_FILE, e)
 
 def _generate_verification_code(email: str) -> str:
     code = str(_secrets.randbelow(900000) + 100000)
@@ -621,7 +622,7 @@ def _send_verification_email(email: str, first_name: str, code: str):
                             {code}
                         </div>
                         <p style="color: #999; font-size: 12px; margin: 24px 0 0;">
-                            This code expires in 10 minutes.
+                            This code expires in 30 minutes.
                         </p>
                     </div>
                     <p style="color: #999; font-size: 12px; text-align: center; margin: 24px 0 0;">
@@ -670,7 +671,7 @@ def _send_password_reset_email(email: str, first_name: str, code: str):
                             {code}
                         </div>
                         <p style="color: #999; font-size: 12px; margin: 24px 0 0;">
-                            This code expires in 10 minutes.
+                            This code expires in 30 minutes.
                         </p>
                     </div>
                     <p style="color: #999; font-size: 12px; text-align: center; margin: 24px 0 0;">
