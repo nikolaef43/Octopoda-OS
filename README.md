@@ -63,13 +63,11 @@ AI agents forget everything between sessions. Every framework treats memory as d
 
 ## Core Features
 
+Everything below works out of the box with `pip install octopoda`. No extras needed unless noted.
+
 ### Semantic Search
 
-Find memories by meaning, not just keys. Uses `bge-small-en-v1.5` (33MB, runs on any CPU).
-
-```bash
-pip install octopoda[ai]  # Adds local embeddings
-```
+Find memories by meaning, not exact keys. Works automatically on cloud. For local-only semantic search, add `pip install octopoda[ai]` (downloads a 33MB embedding model).
 
 ```python
 agent.remember("bio", "Alice is a vegetarian living in London")
@@ -79,136 +77,59 @@ results = agent.recall_similar("where does the user work?")
 # Returns: "Alice is a senior engineer at Google" (score: 0.82)
 ```
 
-### Loop Detection v2
+### Loop Detection
 
-Catches agents stuck in repetitive patterns before they burn through tokens and time. Five detection signals combined into one intelligence report.
+Catches agents stuck in repetitive patterns. Five signals: write similarity, key overwrites, velocity spikes, alert frequency, goal drift.
 
 ```python
 status = agent.get_loop_status()
-# Returns:
-# {
-#   "severity": "orange",
-#   "score": 45,
-#   "signals": [
-#     {"type": "write_similarity", "severity": "orange",
-#      "detail": "8/10 recent writes are semantically similar",
-#      "action": "Call agent.consolidate() to merge duplicates"},
-#     {"type": "velocity_spike", "severity": "red",
-#      "detail": "12 writes in the last 60 seconds",
-#      "action": "Pause the agent. Check for infinite loops."}
-#   ],
-#   "recovery_suggestions": ["Run agent.consolidate()", "Check agent prompt"]
-# }
-
-# Check patterns over time
-history = agent.get_loop_history(hours=24)
-# Shows hourly breakdown, recurring patterns, spike detection
+# {"severity": "orange", "score": 45, "signals": [...]}
+# Every signal tells you what's wrong and exactly what to do about it.
 ```
 
-**Five signals:** write similarity, key overwrites, velocity spikes, alert frequency, goal drift. **Escalating severity:** green > yellow > orange > red. Every signal includes what's happening, why, and exactly what to do.
+### Agent Messaging
 
-### Agent-to-Agent Messaging
-
-Agents can communicate asynchronously through shared inboxes. No shared database needed.
+Agents communicate through shared inboxes. No shared database needed.
 
 ```python
-# Agent A sends a message to Agent B
-agent_a.send_message("agent_b", "I found a bug in the auth module", message_type="alert")
-
-# Agent B reads its inbox
+agent_a.send_message("agent_b", "Found a bug in auth", message_type="alert")
 messages = agent_b.read_messages(unread_only=True)
-
-# Broadcast to all agents
-agent_a.broadcast("Deployment starting in 5 minutes", message_type="alert")
+agent_a.broadcast("Deploy starting in 5 minutes")
 ```
 
 ### Goal Tracking
 
-Set goals with milestones and track progress. Integrates with drift detection to catch when agents go off-track.
+Set goals with milestones. Integrates with drift detection.
 
 ```python
-agent.set_goal("Migrate database to PostgreSQL", milestones=[
-    "Backup existing data",
-    "Create new schema",
-    "Migrate records",
-    "Run validation tests"
-])
-
-agent.update_progress(milestone_index=0, note="Backup completed successfully")
-agent.get_goal()
-# {"progress": 0.25, "status": "active", "milestones_completed": 1}
+agent.set_goal("Migrate to PostgreSQL", milestones=["Backup", "Schema", "Migrate", "Validate"])
+agent.update_progress(milestone_index=0, note="Backup done")
+agent.get_goal()  # {"progress": 0.25, "milestones_completed": 1}
 ```
 
-### Memory Management at Scale
-
-Memory grows. Octopoda keeps it healthy.
+### Memory Management
 
 ```python
-# Forget specific memories
-agent.forget("outdated_config")
-agent.forget_stale(days=30)  # Remove memories older than 30 days
-agent.forget_by_tag("temporary")
-
-# Find and merge duplicates
-agent.consolidate(dry_run=True)  # Preview first
-agent.consolidate()  # Merge semantically similar memories
-
-# Compress old memories into summaries
-agent.summarize_old_memories(older_than_days=7)
-
-# Get a health report
-health = agent.memory_health()
-# {"score": 78, "issues": ["42 stale memories found", "Run consolidate()"]}
+agent.forget("outdated_config")              # Delete specific memories
+agent.forget_stale(days=30)                  # Remove old memories
+agent.consolidate()                          # Merge duplicates
+agent.summarize_old_memories(older_than_days=7)  # Compress into summaries
+agent.memory_health()                        # {"score": 78, "issues": [...]}
 ```
 
-### Memory Export/Import
-
-Move an agent's brain between systems. Backup before risky operations. Clone knowledge to new agents.
+### Export / Import
 
 ```python
-# Export everything
 bundle = agent.export_memories()
-
-# Import into a different agent
 new_agent.import_memories(bundle)
-```
-
-### Filtered Search
-
-Combine semantic queries with tags, importance, and time range.
-
-```python
-results = agent.search_filtered(
-    query="deployment issues",
-    tags=["production"],
-    importance="critical",
-    max_age_seconds=86400  # Last 24 hours only
-)
-```
-
-### Knowledge Graph
-
-Auto-extracts entities and relationships from stored memories. No Neo4j, no setup.
-
-```bash
-pip install octopoda[nlp]  # Adds spaCy
-```
-
-```python
-agent.remember("team", "Alice manages the London team with Bob and Carol")
-
-related = agent.related("Alice")
-# Returns entity graph with relationships
 ```
 
 ### Crash Recovery
 
-Automatic snapshots with sub-millisecond restore.
-
 ```python
 agent.snapshot("before_migration")
 # ... something goes wrong ...
-agent.restore("before_migration")  # Instant recovery
+agent.restore("before_migration")
 ```
 
 ### Shared Memory
@@ -216,14 +137,17 @@ agent.restore("before_migration")  # Instant recovery
 Agents share knowledge across processes with conflict detection.
 
 ```python
-# Agent A stores a finding
 agent_a.share("research_pool", "analysis", {"findings": "..."})
-
-# Agent B reads it
 data = agent_b.read_shared("research_pool", "analysis")
+```
 
-# Safe write with conflict detection
-agent_a.share_safe("research_pool", "config", new_value)
+### Knowledge Graph
+
+Auto-extracts entities and relationships. Requires `pip install octopoda[nlp]` for local spaCy.
+
+```python
+agent.remember("team", "Alice manages the London team with Bob and Carol")
+related = agent.related("Alice")
 ```
 
 ---
