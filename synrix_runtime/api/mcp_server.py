@@ -786,9 +786,9 @@ def main():
     api_key = os.environ.get("OCTOPODA_API_KEY", "")
     if not api_key:
         import sys
-        logger.error("ERROR: OCTOPODA_API_KEY not set.", file=sys.stderr)
-        logger.info("Get your free key at https://octopodas.com", file=sys.stderr)
-        logger.info("Then: OCTOPODA_API_KEY=sk-octopoda-... octopoda-mcp", file=sys.stderr)
+        print("ERROR: OCTOPODA_API_KEY not set.", file=sys.stderr)
+        print("Get your free key at https://octopodas.com", file=sys.stderr)
+        print("Then: OCTOPODA_API_KEY=sk-octopoda-... octopoda-mcp", file=sys.stderr)
         sys.exit(1)
     mcp.run(transport="stdio")
 
