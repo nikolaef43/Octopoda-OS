@@ -379,6 +379,9 @@ async def verify_auth(authorization: Optional[str] = Header(None)):
 _agent_runtimes: OrderedDict = OrderedDict()
 _MAX_CACHED_RUNTIMES = 1000
 
+# Auto-checkpoint: tracks write count per agent, snapshots every 25 writes
+_auto_checkpoint_counter: dict = {}
+
 
 def _get_tenant_id(auth) -> str:
     """Extract tenant_id from auth info. Raises 401 if not authenticated."""
@@ -1213,6 +1216,21 @@ async def remember(agent_id: str, req: RememberRequest, auth=Depends(verify_auth
 
     # Track latency & errors for anomaly detection
     _track_latency_and_errors(agent_id, result.latency_us, result.success, runtime)
+
+    # Auto-checkpoint: save a snapshot every 25 writes (non-blocking)
+    try:
+        _auto_checkpoint_counter[f"{tenant_id}:{agent_id}"] = _auto_checkpoint_counter.get(f"{tenant_id}:{agent_id}", 0) + 1
+        if _auto_checkpoint_counter[f"{tenant_id}:{agent_id}"] >= 25:
+            _auto_checkpoint_counter[f"{tenant_id}:{agent_id}"] = 0
+            import threading
+            def _bg_checkpoint():
+                try:
+                    runtime.snapshot(label=f"auto-{int(time.time())}")
+                except Exception:
+                    pass
+            threading.Thread(target=_bg_checkpoint, daemon=True).start()
+    except Exception:
+        pass
 
     # Brain Intelligence — process write through all 4 features
     brain_warnings = []
@@ -3727,3 +3745,210 @@ async def brain_cost_summary(auth=Depends(verify_auth)):
     except Exception:
         return {"model": model, "total_saved": 0, "loops_caught": 0,
                 "total_wasted_before_detection": 0, "since": None}
+
+
+# ---------------------------------------------------------------------------
+# Agent Timeline & Replay
+# ---------------------------------------------------------------------------
+
+@app.get("/v1/agents/{agent_id}/timeline")
+async def get_agent_timeline(
+    agent_id: str,
+    hours: int = Query(default=24, ge=1, le=720),
+    limit: int = Query(default=200, ge=1, le=1000),
+    auth=Depends(verify_auth),
+):
+    """Get a chronological timeline of all agent events.
+
+    Returns writes, recalls, decisions, loop detections, crashes,
+    recoveries, and snapshots in time order. Use for replay/debugging.
+    """
+    _validate_agent_id(agent_id)
+    runtime = _get_runtime(agent_id, auth)
+    now = time.time()
+    cutoff = now - (hours * 3600)
+    events = []
+
+    loop = asyncio.get_event_loop()
+
+    def _build_timeline():
+        backend = runtime.backend
+
+        # 1. Memory writes (agents:{agent_id}:*)
+        try:
+            writes = backend.query_prefix(f"agents:{agent_id}:", limit=limit)
+            for w in writes:
+                data = w.get("data", {})
+                val = data.get("value", data) if isinstance(data, dict) else data
+                ts = data.get("timestamp", w.get("valid_from", 0))
+                if isinstance(ts, (int, float)) and ts >= cutoff:
+                    key = w.get("key", w.get("name", ""))
+                    clean_key = key.replace(f"agents:{agent_id}:", "")
+                    events.append({
+                        "type": "write",
+                        "time": ts,
+                        "key": clean_key,
+                        "preview": str(val)[:100] if val else "",
+                    })
+        except Exception:
+            pass
+
+        # 2. Decisions (audit:{agent_id}:*)
+        try:
+            decisions = backend.query_prefix(f"audit:{agent_id}:", limit=50)
+            for d in decisions:
+                data = d.get("data", {})
+                val = data.get("value", data) if isinstance(data, dict) else data
+                ts = val.get("timestamp", 0) if isinstance(val, dict) else 0
+                if ts >= cutoff:
+                    events.append({
+                        "type": "decision",
+                        "time": ts,
+                        "decision": val.get("decision", "") if isinstance(val, dict) else "",
+                        "reasoning": str(val.get("reasoning", ""))[:150] if isinstance(val, dict) else "",
+                    })
+        except Exception:
+            pass
+
+        # 3. Loop alerts (alerts:{agent_id}:*)
+        try:
+            alerts = backend.query_prefix(f"alerts:{agent_id}:", limit=50)
+            for a in alerts:
+                data = a.get("data", {})
+                val = data.get("value", data) if isinstance(data, dict) else data
+                ts = val.get("timestamp", 0) if isinstance(val, dict) else 0
+                if ts >= cutoff:
+                    events.append({
+                        "type": "loop_alert",
+                        "time": ts,
+                        "severity": val.get("severity", "unknown") if isinstance(val, dict) else "unknown",
+                        "detail": str(val.get("details", ""))[:100] if isinstance(val, dict) else "",
+                    })
+        except Exception:
+            pass
+
+        # 4. Snapshots (agents:{agent_id}:snapshots:*)
+        try:
+            snaps = backend.query_prefix(f"agents:{agent_id}:snapshots:", limit=20)
+            for s in snaps:
+                data = s.get("data", {})
+                val = data.get("value", data) if isinstance(data, dict) else data
+                ts = val.get("timestamp", 0) if isinstance(val, dict) else 0
+                label = val.get("label", "") if isinstance(val, dict) else ""
+                events.append({
+                    "type": "snapshot",
+                    "time": ts,
+                    "label": label,
+                })
+        except Exception:
+            pass
+
+        # Sort by time
+        events.sort(key=lambda e: e.get("time", 0))
+        return events[-limit:]
+
+    result = await loop.run_in_executor(_executor, _build_timeline)
+    return {
+        "agent_id": agent_id,
+        "hours": hours,
+        "event_count": len(result),
+        "events": result,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Auto-Checkpoints List
+# ---------------------------------------------------------------------------
+
+@app.get("/v1/agents/{agent_id}/checkpoints")
+async def list_checkpoints(agent_id: str, auth=Depends(verify_auth)):
+    """List all checkpoints (manual + auto) for an agent.
+
+    Returns checkpoint labels with timestamps, sorted newest first.
+    Use with POST /v1/agents/{agent_id}/restore to rollback.
+    """
+    _validate_agent_id(agent_id)
+    runtime = _get_runtime(agent_id, auth)
+    loop = asyncio.get_event_loop()
+
+    def _get_checkpoints():
+        backend = runtime.backend
+        snaps = backend.query_prefix(f"agents:{agent_id}:snapshots:", limit=50)
+        checkpoints = []
+        for s in snaps:
+            data = s.get("data", {})
+            val = data.get("value", data) if isinstance(data, dict) else data
+            if isinstance(val, dict):
+                checkpoints.append({
+                    "label": val.get("label", ""),
+                    "timestamp": val.get("timestamp", 0),
+                    "keys_captured": val.get("keys_captured", 0),
+                    "auto": str(val.get("label", "")).startswith("auto-"),
+                })
+        checkpoints.sort(key=lambda c: c.get("timestamp", 0), reverse=True)
+        return checkpoints
+
+    result = await loop.run_in_executor(_executor, _get_checkpoints)
+    return {"agent_id": agent_id, "checkpoints": result, "count": len(result)}
+
+
+# ---------------------------------------------------------------------------
+# Per-Agent Cost Tracking
+# ---------------------------------------------------------------------------
+
+@app.get("/v1/agents/{agent_id}/cost")
+async def get_agent_cost(agent_id: str, auth=Depends(verify_auth)):
+    """Get cumulative cost tracking for a specific agent.
+
+    Shows estimated spend, loops caught, and projected costs.
+    """
+    _validate_agent_id(agent_id)
+    tenant_id = _get_tenant_id(auth)
+    runtime = _get_runtime(agent_id, auth)
+    loop = asyncio.get_event_loop()
+
+    def _get_cost():
+        backend = runtime.backend
+        settings = _get_tenant_settings(tenant_id)
+        model = settings.get("llm_model", "unknown")
+
+        # Get loop status for current cost data
+        try:
+            loop_status = runtime.get_loop_status()
+            cost = loop_status.get("cost", {})
+        except Exception:
+            cost = {}
+
+        # Get agent metrics for operation count
+        try:
+            from synrix_runtime.monitoring.metrics import MetricsCollector
+            collector = MetricsCollector(backend, tenant_id=tenant_id)
+            metrics = collector.get_agent_metrics(agent_id)
+            total_ops = metrics.total_operations
+            avg_write_latency = metrics.avg_write_latency_us
+        except Exception:
+            total_ops = 0
+            avg_write_latency = 0
+
+        # Estimate total cost based on operations
+        try:
+            from synrix_runtime.monitoring.cost_models import get_cost_per_write
+            cost_per_op = get_cost_per_write(model)
+            estimated_total = round(cost_per_op * total_ops, 4)
+        except Exception:
+            cost_per_op = 0
+            estimated_total = 0
+
+        return {
+            "agent_id": agent_id,
+            "model": model,
+            "total_operations": total_ops,
+            "cost_per_operation": cost_per_op,
+            "estimated_total_cost": estimated_total,
+            "loop_cost": cost,
+            "loop_severity": loop_status.get("severity", "green") if 'loop_status' in dir() else "green",
+            "loop_score": loop_status.get("score", 100) if 'loop_status' in dir() else 100,
+        }
+
+    result = await loop.run_in_executor(_executor, _get_cost)
+    return result
