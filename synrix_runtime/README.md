@@ -92,31 +92,30 @@ agent.get_stats()                            # Performance metrics
 ### LangChain
 
 ```python
-from synrix_runtime.integrations.langchain_memory import SynrixMemory
+from octopoda import LangChainMemory
 
-memory = SynrixMemory(agent_id="my_chain")
-chain = ConversationChain(llm=llm, memory=memory)
-# All conversation history persisted in Synrix
-# Survives crashes. Full history available.
+memory = LangChainMemory("my-chain")
+memory.save_context({"input": "I prefer dark mode"}, {"output": "Got it!"})
+variables = memory.load_memory_variables({})
 ```
 
 ### CrewAI
 
 ```python
-from synrix_runtime.integrations.crewai_memory import SynrixCrewMemory
+from octopoda import CrewAIMemory
 
-crew_memory = SynrixCrewMemory(crew_id="research_crew")
-crew_memory.store_finding("researcher", "market_data", {"value": "$4.2B"})
-crew_memory.get_crew_knowledge_base()  # All crew knowledge
-crew_memory.crew_snapshot("milestone")  # Snapshot entire crew
+crew = CrewAIMemory("research-crew")
+crew.store_finding("researcher", "market_data", {"value": "$4.2B"})
+crew.get_crew_knowledge_base()  # All crew knowledge
+crew.crew_snapshot("milestone")  # Snapshot entire crew
 ```
 
 ### AutoGen
 
 ```python
-from synrix_runtime.integrations.autogen_memory import SynrixAutoGenMemory
+from octopoda import AutoGenMemory
 
-memory = SynrixAutoGenMemory(group_id="my_group")
+memory = AutoGenMemory("my-group")
 memory.store_message("agent_a", "agent_b", "Hello")
 history = memory.get_conversation_history()
 ```
@@ -124,10 +123,10 @@ history = memory.get_conversation_history()
 ### OpenAI Agents SDK
 
 ```python
-from synrix_runtime.integrations.openai_agents import SynrixOpenAIMemory
+from octopoda import OpenAIAgentsMemory
 
-memory = SynrixOpenAIMemory()
-memory.store_thread_state("thread_123", state)
+memory = OpenAIAgentsMemory()
+memory.store_thread_state("thread_123", {"messages": [...]})
 restored = memory.restore_thread("thread_123")
 ```
 

@@ -166,22 +166,32 @@ new_agent.import_memories(bundle)
 Works with the frameworks you already use. Just swap in Octopoda and your agents get persistent memory.
 
 ```python
-# LangChain
-from synrix_runtime.integrations.langchain_memory import SynrixMemory
-memory = SynrixMemory(agent_id="my_chain")
+# LangChain — drop-in conversation memory
+from octopoda import LangChainMemory
+memory = LangChainMemory("my-chain")
+memory.save_context({"input": "I prefer dark mode"}, {"output": "Got it!"})
+variables = memory.load_memory_variables({})
 
-# CrewAI
-from synrix_runtime.integrations.crewai_memory import SynrixCrewMemory
-crew_memory = SynrixCrewMemory(crew_id="research_crew")
+# CrewAI — persistent crew findings and task results
+from octopoda import CrewAIMemory
+crew = CrewAIMemory("research-crew")
+crew.store_finding("researcher", "market_size", {"value": "$4.2B"})
+finding = crew.get_finding("market_size")
 
-# AutoGen
-from synrix_runtime.integrations.autogen_memory import SynrixAutoGenMemory
-memory = SynrixAutoGenMemory(group_id="dev_team")
+# AutoGen — multi-agent conversation memory
+from octopoda import AutoGenMemory
+memory = AutoGenMemory("dev-team")
+memory.store_message("user_proxy", "assistant", "Research quantum computing")
+history = memory.get_conversation_history()
 
-# OpenAI Agents SDK
-from synrix.integrations.openai_agents import octopoda_tools
-tools = octopoda_tools("my_agent")
+# OpenAI Agents SDK — thread and run persistence
+from octopoda import OpenAIAgentsMemory
+memory = OpenAIAgentsMemory()
+memory.store_thread_state("thread_001", {"messages": [...]})
+restored = memory.restore_thread("thread_001")
 ```
+
+All integrations work locally (no API key) or with cloud sync (set `OCTOPODA_API_KEY`).
 
 ---
 
@@ -190,22 +200,32 @@ tools = octopoda_tools("my_agent")
 Give Claude, Cursor, or any MCP-compatible AI persistent memory with zero code.
 
 ```bash
-pip install octopoda[mcp]
+pip install octopoda
 ```
 
-Add to your Claude Desktop config (`claude_desktop_config.json`):
+Add to Claude Code:
+
+```bash
+claude mcp add octopoda -s user -e OCTOPODA_API_KEY=sk-octopoda-YOUR_KEY -- python -m synrix_runtime.api.mcp_server
+```
+
+Or add to Claude Desktop config (`claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
     "octopoda": {
-      "command": "octopoda-mcp"
+      "command": "python",
+      "args": ["-m", "synrix_runtime.api.mcp_server"],
+      "env": {
+        "OCTOPODA_API_KEY": "sk-octopoda-YOUR_KEY"
+      }
     }
   }
 }
 ```
 
-25 tools for memory, search, loop detection, goals, messaging, and more.
+28 tools for memory, search, loop detection, goals, messaging, and more.
 
 ---
 
@@ -228,13 +248,13 @@ agent.write("preference", "dark mode")
 results = agent.search("user preferences")
 ```
 
-| | Free | Pro ($19/mo) | Business ($79/mo) |
-|---|---|---|---|
-| Agents | 5 | 25 | 75 |
-| Memories | 5,000 | 250,000 | 1,000,000 |
-| AI extractions | 100 | 100 + own key | 100 + own key |
-| Rate limit | 60 rpm | 300 rpm | 1,000 rpm |
-| Dashboard | Yes | Yes | Yes |
+| | Free | Pro ($19/mo) | Business ($49/mo) | Scale ($99/mo) |
+|---|---|---|---|---|
+| Agents | 5 | 25 | 75 | Unlimited |
+| Memories | 5,000 | 250,000 | 1,000,000 | 5,000,000 |
+| AI extractions | 100 | 10,000 | 50,000 | Unlimited |
+| Rate limit | 60 rpm | 300 rpm | 1,000 rpm | 5,000 rpm |
+| Dashboard | Yes | Yes | Yes | Yes |
 
 ---
 
