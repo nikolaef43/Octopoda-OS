@@ -313,6 +313,46 @@ claude mcp add octopoda -s user -e OCTOPODA_API_KEY=sk-octopoda-YOUR_KEY -- pyth
 
 28 tools for memory, search, loop detection, goals, messaging, decisions, snapshots, and more.
 
+<details>
+<summary><b>Full MCP tool list (the names your agent will actually see)</b></summary>
+
+When you register the server with `claude mcp add octopoda ...`, the MCP client prefixes each tool with the server name. So the tool that the function defines as `octopoda_remember` ends up exposed to your agent as `octopoda_octopoda_remember`. This is correct behaviour from the client; just be aware of it when you write skill files.
+
+| Function name (server side) | Exposed name in client |
+|---|---|
+| `octopoda_remember` | `octopoda_octopoda_remember` |
+| `octopoda_recall` | `octopoda_octopoda_recall` |
+| `octopoda_search` | `octopoda_octopoda_search` |
+| `octopoda_recall_similar` | `octopoda_octopoda_recall_similar` |
+| `octopoda_recall_history` | `octopoda_octopoda_recall_history` |
+| `octopoda_related` | `octopoda_octopoda_related` |
+| `octopoda_snapshot` | `octopoda_octopoda_snapshot` |
+| `octopoda_restore` | `octopoda_octopoda_restore` |
+| `octopoda_share` | `octopoda_octopoda_share` |
+| `octopoda_read_shared` | `octopoda_octopoda_read_shared` |
+| `octopoda_list_agents` | `octopoda_octopoda_list_agents` |
+| `octopoda_agent_stats` | `octopoda_octopoda_agent_stats` |
+| `octopoda_process_conversation` | `octopoda_octopoda_process_conversation` |
+| `octopoda_get_context` | `octopoda_octopoda_get_context` |
+| `octopoda_log_decision` | `octopoda_octopoda_log_decision` |
+| `octopoda_forget` | `octopoda_octopoda_forget` |
+| `octopoda_forget_stale` | `octopoda_octopoda_forget_stale` |
+| `octopoda_memory_health` | `octopoda_octopoda_memory_health` |
+| `octopoda_consolidate` | `octopoda_octopoda_consolidate` |
+| `octopoda_loop_status` | `octopoda_octopoda_loop_status` |
+| `octopoda_loop_history` | `octopoda_octopoda_loop_history` |
+| `octopoda_send_message` | `octopoda_octopoda_send_message` |
+| `octopoda_read_messages` | `octopoda_octopoda_read_messages` |
+| `octopoda_broadcast` | `octopoda_octopoda_broadcast` |
+| `octopoda_set_goal` | `octopoda_octopoda_set_goal` |
+| `octopoda_get_goal` | `octopoda_octopoda_get_goal` |
+| `octopoda_update_progress` | `octopoda_octopoda_update_progress` |
+| `octopoda_search_filtered` | `octopoda_octopoda_search_filtered` |
+
+If you register the server with a different name (e.g. `claude mcp add memory ...`), the prefix changes to match. Use whichever name your client actually exposes when writing skill files; do not assume a single prefix.
+
+</details>
+
 ---
 
 ## Cloud
