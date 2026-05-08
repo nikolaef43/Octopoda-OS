@@ -1,5 +1,25 @@
 # Changelog
 
+## 3.1.7 (2026-05-08)
+
+### Schema-level version cap for runtime/metrics keys
+Issue #6 follow-up. The 3.1.6 GC fix prunes `runtime:agents:*` every 6 hours but each heartbeat still creates a new row between cycles, so the table can gain ~70K rows during the gap before the next GC catches up. This release adds an `AFTER INSERT` trigger directly to the SQLite schema that caps each `runtime:*` and `metrics:*` key to its 10 most-recent versions on every write. The cap fires inline so the table never grows past steady state. Configurable via `SYNRIX_MAX_VERSIONS_PER_RUNTIME_KEY`. User memory keys (`agents:*`) are explicitly excluded — their full version history is preserved for `recall_history()`. Credit to @Dvalin21 in issue #6 for the trigger pattern and end-to-end validation.
+
+### Daemon thread intervals now configurable
+Hardcoded 3s / 5s / 10s polling on heartbeat / anomaly / metrics / recovery loops was too aggressive for low-resource boxes and contributed to the SQLite contention reported in issue #6. All four are now env-configurable, defaults unchanged for backward compatibility:
+- `SYNRIX_HEARTBEAT_INTERVAL_SEC` (default 3)
+- `SYNRIX_ANOMALY_INTERVAL_SEC` (default 5)
+- `SYNRIX_METRICS_INTERVAL_SEC` (default 10)
+- `SYNRIX_RECOVERY_INTERVAL_SEC` (default 5)
+
+For long-running local deployments the recommended values are 15 / 30 / 60 / 30 seconds — that's the configuration validated to drop CPU from 184% to 7-8% in the issue thread.
+
+### FTS5 cleanup trigger
+Companion `AFTER DELETE` trigger now removes corresponding `nodes_fts` rows when nodes are pruned, fixing the stale-FTS-content issue (4.2M FTS rows for 133K live nodes in the original report).
+
+### Test coverage
+New `tests/test_runtime_version_cap.py` verifies: runtime/metrics caps, user-memory bypass, per-key independence, env-var override, FTS cleanup. 6/6 passing.
+
 ## 3.1.6 (2026-05-08)
 
 ### Critical bugfix — local SQLite unbounded growth

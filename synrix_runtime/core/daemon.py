@@ -3,6 +3,7 @@ Octopoda Agent Runtime — Central Daemon
 The central nervous system of the entire runtime.
 """
 
+import os
 import time
 import json
 import threading
@@ -373,10 +374,10 @@ class RuntimeDaemon:
                                 logger.error("Recovery failed for %s: %s", agent_id, e)
             except Exception as e:
                 logger.error("Heartbeat monitor error: %s", e, exc_info=True)
-            time.sleep(3)
+            time.sleep(int(os.getenv("SYNRIX_HEARTBEAT_INTERVAL_SEC", "3")))
 
     def _anomaly_detector_loop(self):
-        """Background thread: check for anomalies every 5 seconds."""
+        """Background thread: check for anomalies (default every 5 seconds, override via SYNRIX_ANOMALY_INTERVAL_SEC)."""
         while self.running:
             try:
                 # Import here to avoid circular imports
@@ -391,10 +392,10 @@ class RuntimeDaemon:
                             self.emit_event("anomaly_detected", anomaly)
             except Exception as e:
                 logger.error("Anomaly detector error: %s", e, exc_info=True)
-            time.sleep(5)
+            time.sleep(int(os.getenv("SYNRIX_ANOMALY_INTERVAL_SEC", "5")))
 
     def _metrics_aggregator_loop(self):
-        """Background thread: aggregate system metrics every 10 seconds."""
+        """Background thread: aggregate system metrics (default every 10 seconds, override via SYNRIX_METRICS_INTERVAL_SEC)."""
         while self.running:
             try:
                 agents = self.get_active_agents()
@@ -406,10 +407,10 @@ class RuntimeDaemon:
                 )
             except Exception as e:
                 logger.error("Metrics aggregator error: %s", e, exc_info=True)
-            time.sleep(10)
+            time.sleep(int(os.getenv("SYNRIX_METRICS_INTERVAL_SEC", "10")))
 
     def _recovery_watchdog_loop(self):
-        """Background thread: watch for agents needing recovery every 5 seconds."""
+        """Background thread: watch for agents needing recovery (default every 5 seconds, override via SYNRIX_RECOVERY_INTERVAL_SEC)."""
         while self.running:
             try:
                 agents = self.get_all_agents()
@@ -423,7 +424,7 @@ class RuntimeDaemon:
                                 logger.error("Watchdog recovery failed for %s: %s", agent_id, e)
             except Exception as e:
                 logger.error("Recovery watchdog error: %s", e, exc_info=True)
-            time.sleep(5)
+            time.sleep(int(os.getenv("SYNRIX_RECOVERY_INTERVAL_SEC", "5")))
 
     def _gc_loop(self):
         """Background thread: run garbage collection periodically."""
