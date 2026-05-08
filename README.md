@@ -401,13 +401,15 @@ results = agent.search("user preferences")
 ## Installation
 
 ```bash
-pip install octopoda              # Core — everything to get started
+pip install octopoda              # Core — everything to get started (Python 3.9+)
 pip install octopoda[ai]          # + Local embeddings for semantic search
-pip install octopoda[server]      # + Local dashboard server
+pip install octopoda[server]      # + Local dashboard server (Flask)
 pip install octopoda[nlp]         # + spaCy for knowledge graph extraction
 pip install octopoda[mcp]         # + MCP server for Claude/Cursor (Python 3.10+)
-pip install octopoda[all]         # Everything
+pip install octopoda[all]         # Everything (Python 3.10+)
 ```
+
+> **Python version note:** the core package supports Python 3.9 and up. The `[mcp]` extra requires Python 3.10+ because the upstream `mcp` library does. If you're on 3.9 and want everything except MCP, use `pip install octopoda[ai,server,nlp]`.
 
 ## Configuration
 

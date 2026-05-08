@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.1.6 (2026-05-08)
+
+### Critical bugfix — local SQLite unbounded growth
+- `runtime:agents:*` heartbeat and state writes were never being garbage-collected. Each agent writes ~3 rows/sec to this prefix; without GC the SQLite `nodes` table grew unboundedly, eventually causing background-thread queries to spin CPU and freeze the daemon. One reported case had this single prefix at 2.2M of 4.1M total rows. Now pruned by default (`runtime_agents_days=1`, configurable via `SYNRIX_GC_RUNTIME_AGENTS_DAYS`). Fixes #6.
+- Existing local DBs that already grew past a few hundred thousand rows will see significant cleanup on the first GC cycle after upgrade. Plan for that cycle to take a few extra seconds; subsequent cycles return to normal.
+
+### Audit chain integrity
+- `verify_chain` now tracks expected `prev_hash` per agent rather than globally, fixing a long-standing false negative when the global view crossed agent boundaries. Returns a `by_agent` breakdown alongside the overall result. The historical chain was always intact; only the verifier was wrong.
+
+### Misc
+- All package `__version__` constants now match `pyproject.toml`. They had drifted across `octopoda`, `synrix`, `synrix_runtime` historically (3.1.4 / 3.1.0 / 3.1.0).
+- README updated with the full MCP tool reference (the actual exposed names after `claude mcp add octopoda`), the Python version note for the `[mcp]` extra, and the local dashboard hero screenshot refreshed.
+- CI smoke matrix dropped Python 3.9 because `mcp>=1.0.0` requires Python 3.10+. Core `octopoda` still installs on 3.9 — only the optional `[mcp]` extra needs 3.10+.
+- CI test assertions updated for the rebrand (`SYNRIX_LICENSE_KEY` → `OCTOPODA_LICENSE_KEY`, `synrix.io/pricing` → `octopodas.com/pricing`, version-pinning removed from `test_health`).
+
 ## 3.1.1 (2026-04-17)
 
 ### Critical bugfix — fixes silent activation failures
