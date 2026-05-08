@@ -29,17 +29,31 @@
   <img src="docs/images/dashboard-overview.png" alt="Octopoda dashboard — 5 agents, 226 ops, 382 loops caught, $12.45 in wasted tokens detected" width="900" />
 </p>
 
-<p align="center"><sub><i>Live overview from a real fleet — agent health, operations volume, anomaly stream, and dollars saved by catching loops before they ran the bill.</i></sub></p>
+<p align="center"><sub><i>Live overview from a real fleet. Agent health, operations volume, anomaly stream, and dollars saved by catching loops before they ran the bill.</i></sub></p>
+
+---
+
+## What is Octopoda
+
+Octopoda is the missing layer between your AI agents and a working production system. Think of it as the brain stem your agents always needed but never had.
+
+You write your agent however you like. Pure Python, LangChain, CrewAI, AutoGen, OpenAI Agents SDK, MCP. Octopoda sits underneath and quietly handles the boring stuff that makes agents actually usable. Persistent memory that survives every restart. Loop detection that catches a stuck agent in seconds, before it burns through your token budget overnight. A full audit trail of every decision, every memory write, every recovery. A live dashboard that finally lets you see what your agents are doing.
+
+It runs locally with one `pip install` and zero infrastructure. When you outgrow that, the same code syncs to the cloud with a single environment variable. No re-architecture, no migration, no lock-in. The whole thing is open source under MIT.
+
+If you have ever shipped an AI agent and watched it forget who you are, loop on a failing API call for hours, or just disappear into a black box you cannot debug, this is the thing you wished existed.
 
 ---
 
 ## Why Octopoda
 
-Three things break when you ship agents to production. Octopoda fixes all three by default.
+Three things go wrong when AI agents leave your laptop. Octopoda handles all three out of the box, with no config, so you can focus on the agent and not the plumbing.
 
-- **Agents forget.** Every restart loses context. Octopoda persists memory through crashes, deployments, and process kills — verified end-to-end on every release.
-- **Agents loop.** A stuck agent can burn hundreds of dollars in tokens before anyone notices. The 5-signal loop detector catches it in seconds and shows you the call pattern that caused it.
-- **Agents are black boxes.** Octopoda logs every decision, write, and recovery into a hash-chained audit trail you can replay, diff, and verify for tamper-evidence.
+**Agents forget, until they do not.** Every time your process restarts, your agent loses everything it ever knew about the user, the task, and the conversation. Octopoda gives every agent persistent memory that survives restarts, crashes, deployments, and process kills. Memory just works, the way you always assumed it would.
+
+**Agents loop, and silently burn money.** A stuck agent retrying a failing tool call can quietly burn hundreds of dollars in tokens before anyone notices. Octopoda's five signal loop detector catches retry, oscillation, ping pong, reflection, and recall write patterns in seconds, and surfaces exactly which calls caused it.
+
+**Agents are black boxes, and that is terrifying in production.** Why did it do that? You had no idea, until now. Octopoda logs every decision, every write, every recovery into a hash chained audit trail you can replay, diff, and verify for tamper evidence. Pair it with the live 3D dashboard and you can finally see what your agents are doing in real time.
 
 ---
 

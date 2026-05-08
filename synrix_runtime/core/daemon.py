@@ -435,9 +435,12 @@ class RuntimeDaemon:
                 return
             gc = GarbageCollector(self.backend, gc_config)
             interval_seconds = gc_config.interval_hours * 3600
-            logger.info("GC started: interval=%dh, metrics=%dd, events=%dd, audit=%dd",
-                        gc_config.interval_hours, gc_config.metrics_days,
-                        gc_config.events_days, gc_config.audit_days)
+            logger.info(
+                "GC started: interval=%dh, metrics=%dd, events=%dd, audit=%dd, runtime_agents=%dd",
+                gc_config.interval_hours, gc_config.metrics_days,
+                gc_config.events_days, gc_config.audit_days,
+                gc_config.runtime_agents_days,
+            )
         except Exception as e:
             logger.error("Failed to initialize GC: %s", e)
             return
@@ -447,7 +450,7 @@ class RuntimeDaemon:
                 stats = gc.run_gc()
                 total = stats.get("metrics_deleted", 0) + stats.get("events_deleted", 0) + \
                         stats.get("alerts_deleted", 0) + stats.get("audit_deleted", 0) + \
-                        stats.get("snapshots_pruned", 0)
+                        stats.get("runtime_agents_deleted", 0) + stats.get("snapshots_pruned", 0)
                 if total > 0:
                     logger.info("GC cycle: %d entries pruned in %.1fms", total, stats.get("elapsed_ms", 0))
             except Exception as e:
