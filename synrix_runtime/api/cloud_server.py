@@ -43,10 +43,10 @@ _DEFAULT_RPM = int(os.environ.get("SYNRIX_RATE_LIMIT_RPM", "60"))
 
 
 class _RateLimiter:
-    """Token-bucket rate limiter keyed by tenant ID (not IP)."""
+    """Token-bucket rate limiter keyed by any string ID (tenant, agent, IP)."""
 
     def __init__(self):
-        self._buckets: dict = {}  # tenant_id -> [tokens, last_refill, rpm]
+        self._buckets: dict = {}  # key -> [tokens, last_refill, rpm]
         self._lock = threading.Lock()
 
     def _refill(self, bucket: list):
@@ -56,12 +56,12 @@ class _RateLimiter:
         bucket[0] = min(rpm, bucket[0] + elapsed * (rpm / 60.0))
         bucket[1] = now
 
-    def allow(self, tenant_id: str, plan: str = "free", rpm_override: int = 0) -> bool:
+    def allow(self, key: str, plan: str = "free", rpm_override: int = 0) -> bool:
         rpm = rpm_override if rpm_override > 0 else _PLAN_RATE_LIMITS.get(plan, _DEFAULT_RPM)
         with self._lock:
-            if tenant_id not in self._buckets:
-                self._buckets[tenant_id] = [rpm, time.monotonic(), rpm]
-            bucket = self._buckets[tenant_id]
+            if key not in self._buckets:
+                self._buckets[key] = [rpm, time.monotonic(), rpm]
+            bucket = self._buckets[key]
             bucket[2] = rpm  # update if plan changed
             self._refill(bucket)
             if bucket[0] >= 1.0:
@@ -69,20 +69,54 @@ class _RateLimiter:
                 return True
             return False
 
-    def get_remaining(self, tenant_id: str) -> int:
+    def get_remaining(self, key: str) -> int:
         with self._lock:
-            if tenant_id not in self._buckets:
+            if key not in self._buckets:
                 return _DEFAULT_RPM
-            bucket = self._buckets[tenant_id]
+            bucket = self._buckets[key]
             self._refill(bucket)
             return int(bucket[0])
+
+    def retry_after(self, key: str) -> int:
+        """Seconds until at least one token is available. Always >= 1."""
+        with self._lock:
+            if key not in self._buckets:
+                return 1
+            bucket = self._buckets[key]
+            self._refill(bucket)
+            if bucket[0] >= 1.0:
+                return 1
+            rpm = bucket[2] or _DEFAULT_RPM
+            # tokens needed per second = rpm / 60; time for 1 token = 60/rpm
+            need = 1.0 - bucket[0]
+            secs = need * (60.0 / max(rpm, 1))
+            return max(1, int(secs) + 1)
 
 
 _rate_limiter = _RateLimiter()
 
+# Per-agent ceiling — protects other agents on the same tenant from a single
+# runaway agent. Generous enough for normal use, tight enough to flag bursts.
+# A business tenant has 1000 rpm total; one agent can use up to 300 of those.
+_PER_AGENT_RPM = int(os.environ.get("SYNRIX_PER_AGENT_RPM", "300"))
+_agent_rate_limiter = _RateLimiter()
+
 # Separate stricter rate limiter for auth endpoints (prevent brute-force)
 _AUTH_RPM = 5  # 5 attempts per minute per IP (prevents mass account creation)
 _auth_rate_limiter = _RateLimiter()
+
+
+def _extract_agent_id_from_path(path: str) -> str:
+    """Pull /v1/agents/{agent_id}/... -> agent_id, else ''."""
+    if "/v1/agents/" not in path:
+        return ""
+    after = path.split("/v1/agents/", 1)[1]
+    # Stop at the next slash or query string
+    agent_id = after.split("/", 1)[0].split("?", 1)[0]
+    # Sanity: empty / contains placeholder / is a sub-resource collection name
+    if agent_id in ("", "metrics"):
+        return ""
+    return agent_id
 
 from synrix_runtime.api.cloud_models import (
     RegisterAgentRequest, RememberRequest, BatchRememberRequest,
@@ -731,19 +765,54 @@ async def rate_limit_middleware(request: Request, call_next):
         except Exception:
             pass
 
+    # ----- Per-agent rate limit (inner) -----
+    # A runaway single agent shouldn't lock out the whole tenant. If the
+    # endpoint targets a specific agent, throttle that agent alone first.
+    agent_id = _extract_agent_id_from_path(path)
+    if agent_id and tenant_id != "anonymous":
+        agent_key = f"{tenant_id}:{agent_id}"
+        if not _agent_rate_limiter.allow(agent_key, rpm_override=_PER_AGENT_RPM):
+            from fastapi.responses import JSONResponse
+            retry = _agent_rate_limiter.retry_after(agent_key)
+            remaining = _agent_rate_limiter.get_remaining(agent_key)
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "detail": "Per-agent rate limit exceeded.",
+                    "scope": "agent",
+                    "agent_id": agent_id,
+                    "limit": _PER_AGENT_RPM,
+                    "retry_after_seconds": retry,
+                },
+                headers={
+                    "Retry-After": str(retry),
+                    "X-RateLimit-Scope": "agent",
+                    "X-RateLimit-Limit": str(_PER_AGENT_RPM),
+                    "X-RateLimit-Remaining": str(remaining),
+                },
+            )
+
+    # ----- Per-tenant rate limit (outer ceiling) -----
     if not _rate_limiter.allow(tenant_id, plan):
         from fastapi.responses import JSONResponse
         remaining = _rate_limiter.get_remaining(tenant_id)
+        retry = _rate_limiter.retry_after(tenant_id)
         rpm = _PLAN_RATE_LIMITS.get(plan, _DEFAULT_RPM)
         return JSONResponse(
             status_code=429,
             content={
                 "detail": "Rate limit exceeded.",
+                "scope": "tenant",
                 "limit": rpm,
                 "plan": plan,
-                "retry_after_seconds": 1,
+                "retry_after_seconds": retry,
             },
-            headers={"Retry-After": "1", "X-RateLimit-Limit": str(rpm), "X-RateLimit-Remaining": str(remaining)},
+            headers={
+                "Retry-After": str(retry),
+                "X-RateLimit-Scope": "tenant",
+                "X-RateLimit-Limit": str(rpm),
+                "X-RateLimit-Remaining": str(remaining),
+            },
         )
     return await call_next(request)
 

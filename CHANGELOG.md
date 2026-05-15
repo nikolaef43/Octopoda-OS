@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.1.19 (2026-05-15)
+
+**Two-tier rate limiting.** A single runaway agent on a tenant used to consume the entire tenant's per-minute quota, locking out every other agent on that account until the window reset. After this release, the limiter checks the per-agent bucket first, and only falls back to the tenant ceiling if the agent passes.
+
+- New `_PER_AGENT_RPM` (default 300, env `SYNRIX_PER_AGENT_RPM`) applied per `tenant:agent_id` pair before the existing per-tenant check.
+- `_RateLimiter` gained `retry_after(key)` — computed from current bucket state. The `Retry-After` HTTP header and the 429 response body's `retry_after_seconds` are now honest token math, not hardcoded `1`.
+- 429 responses now include `X-RateLimit-Scope: agent | tenant` and a `scope` field in the body so clients can tell whether one agent is misbehaving vs. the whole tenant is over budget.
+- 4/4 unit scenarios in `rate_limit_check.py` cover noisy-agent isolation, tenant ceiling, refill math, and recovery after wait.
+
 ## 3.1.18 (2026-05-15)
 
 Closes Issue #7 (Yeraze): local deployment now actually works without `DATABASE_URL`.
