@@ -19,8 +19,8 @@ import sys
 import time
 import threading
 
-PYBIN = "C:/Users/user/AppData/Local/Temp/mcp-test/venv/Scripts/python.exe"
-MCP_BIN = "C:/Users/user/AppData/Local/Temp/mcp-test/venv/Scripts/octopoda-mcp.exe"
+PYBIN = os.environ.get("OCTOPODA_TEST_PYTHON", "python")
+MCP_BIN = os.environ.get("OCTOPODA_MCP_BIN", "octopoda-mcp")
 DATA_DIR = "/tmp/mcp-harness-data"
 shutil.rmtree(DATA_DIR, ignore_errors=True)
 os.makedirs(DATA_DIR, exist_ok=True)

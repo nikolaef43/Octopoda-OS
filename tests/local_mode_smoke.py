@@ -26,7 +26,7 @@ PORT = "8742"
 print(f"Starting local server on port {PORT} with NO DATABASE_URL...")
 proc = subprocess.Popen(
     [
-        "C:/Users/user/AppData/Local/Temp/test-local-3118/Scripts/python.exe",
+        os.environ.get("OCTOPODA_TEST_PYTHON", "python"),
         "-m", "uvicorn", "synrix_runtime.api.cloud_server:app",
         "--host", "127.0.0.1", "--port", PORT,
         "--log-level", "warning",

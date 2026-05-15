@@ -130,7 +130,7 @@ for name, url in TARGETS:
 
 # Now spin up local cloud_server with no DATABASE_URL and test the bundled dashboard
 print("\n--- spinning up local cloud_server.py (from PyPI install) ---")
-PYBIN = "C:/Users/user/AppData/Local/Temp/mcp-test/venv/Scripts/python.exe"
+PYBIN = os.environ.get("OCTOPODA_TEST_PYTHON", "python")
 if not os.path.exists(PYBIN):
     print("  skip (PyPI venv not found, run user_simulation.py or mcp_stdio_harness.py first)")
 else:

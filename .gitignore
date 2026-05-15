@@ -105,3 +105,11 @@ synrix_runtime/dashboard/static/mockups/
 
 # License key signing tool — never commit
 tools/generate_license_key.py
+
+# Internal scripts that live in scripts/ but must never be public
+scripts/apology_campaign.py
+scripts/revert_expired_comps.py
+scripts/create_admin_activation_fn.py
+scripts/test_free_tier_cap.py
+scripts/test_stripe_full_sequence.py
+scripts/test_tenant_isolation.py

@@ -17,7 +17,7 @@ import urllib.parse
 import urllib.request
 import urllib.error
 
-PYBIN = "C:/Users/user/AppData/Local/Temp/mcp-test/venv/Scripts/python.exe"
+PYBIN = os.environ.get("OCTOPODA_TEST_PYTHON", "python")
 DATA_DIR = "/tmp/local-dash-data"
 DASH_PORT = "7843"
 API_PORT = "8747"
