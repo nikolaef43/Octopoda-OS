@@ -96,3 +96,12 @@ LOVABLE-*.md
 RESEARCH-REPORT.md
 FEATURE-ANALYSIS.md
 _integration_smoketest_*.py
+
+# Dashboard backups and marketing mockups (never ship)
+synrix_runtime/dashboard/static.backup*/
+synrix_runtime/dashboard/static.old*/
+synrix_runtime/dashboard/static.bak*/
+synrix_runtime/dashboard/static/mockups/
+
+# License key signing tool — never commit
+tools/generate_license_key.py

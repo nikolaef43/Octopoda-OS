@@ -180,7 +180,7 @@ CREATE TABLE IF NOT EXISTS tenant_settings (
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'octopoda_app') THEN
-        CREATE ROLE octopoda_app LOGIN PASSWORD 'octopoda_app_password';
+        CREATE ROLE octopoda_app LOGIN PASSWORD '<CHANGE_ME_IN_PROD>';
     END IF;
 END
 $$;
