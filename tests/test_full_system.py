@@ -39,7 +39,7 @@ import hashlib
 
 CLOUD_API = "https://api.octopodas.com"
 WEBSITE = "https://octopodas.com"
-ADMIN_KEY = os.environ.get("OCTOPODA_ADMIN_KEY", "***REDACTED-ADMIN-KEY***")
+ADMIN_KEY = os.environ.get("OCTOPODA_ADMIN_KEY")
 
 passed = 0
 failed = 0

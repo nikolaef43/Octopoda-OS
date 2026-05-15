@@ -16,10 +16,9 @@ API = "https://api.octopodas.com"
 
 # Two real accounts for tenant isolation testing
 # New account (maxon email)
-KEY_NEW = "***REDACTED-KEY-NEW***"
+KEY_NEW = os.environ.get('KEY_NEW', "")
 # Joejack account (fresh key from login)
-KEY_JOE = "***REDACTED-KEY-JOE***"
-
+KEY_JOE = os.environ.get('KEY_JOE', "")
 AGENTS = [
     ("live-test-alpha", "research"),
     ("live-test-beta", "chat"),

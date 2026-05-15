@@ -19,8 +19,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "python-sdk"))
 # ============================================================
 # CONFIG
 # ============================================================
-SOPHIE_KEY = "***REDACTED-SOPHIE-KEY***"
-JOE_KEY = "***REDACTED-JOE-KEY***"
+SOPHIE_KEY = os.environ.get('SOPHIE_KEY', "")
+JOE_KEY = os.environ.get('JOE_KEY', "")
 API_URL = "https://api.octopodas.com"
 
 results = []
