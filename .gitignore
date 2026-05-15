@@ -81,3 +81,18 @@ venv/
 .venv/
 **/venv/
 **/.venv/
+
+# Internal scripts and customer/business artifacts that must not ship
+apology_campaign.py
+monitor_502.py
+monitor_cron.log
+monitor_*.py
+full_audit.py
+revert_expired_comps.py
+customer-feedback-form.md
+Octopoda-Customer-Feedback.docx
+LOOP-INTELLIGENCE-V2-PLAN.md
+LOVABLE-*.md
+RESEARCH-REPORT.md
+FEATURE-ANALYSIS.md
+_integration_smoketest_*.py
