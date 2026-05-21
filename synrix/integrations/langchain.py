@@ -2,7 +2,7 @@
 Octopoda × LangChain Integration
 ==================================
 Drop-in memory for LangChain agents and chains.
-All memory is stored in the Octopoda Cloud API (api.octapodas.com).
+All memory is stored in the Octopoda Cloud API (api.octopodas.com).
 
 Setup:
     pip install octopoda[client] langchain langchain-core

@@ -204,12 +204,17 @@ class AgentRuntime:
             # prevent writing agent state to the shared global backend.
             self.backend = backend_override
             self._daemon = None
-        elif os.environ.get("OCTOPODA_API_KEY", "").startswith("sk-octopoda-"):
-            # Cloud mode: API key is set, route all operations through the cloud API.
-            # This is the path most users hit after signup + pip install.
+        elif (self._api_key or "").startswith("sk-octopoda-"):
+            # Cloud mode: API key resolved from env var OR ~/.octopoda/config.json
+            # (set by `octopoda login`). Route all operations through cloud API.
+            # Fix 2026-05-21: previously only checked env var directly, so users
+            # who logged in interactively got stuck in local mode.
             try:
                 from synrix.cloud import Octopoda
-                _cloud_client = Octopoda()
+                # Pass api_key explicitly so the cloud client uses the same
+                # resolved key (env var OR config) instead of re-reading the
+                # env var directly.
+                _cloud_client = Octopoda(api_key=self._api_key)
                 self._cloud_agent = _cloud_client.agent(agent_id, metadata={"type": agent_type})
                 # Create a thin backend wrapper so internal code that touches
                 # self.backend still works (metrics, loop detection, etc.)

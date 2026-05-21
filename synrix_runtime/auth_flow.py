@@ -38,9 +38,23 @@ def _save_config(config: dict):
 
 
 def get_api_key() -> str:
-    """Get the stored API key, or empty string if none."""
+    """Get the resolved API key from env var OR config file.
+
+    Resolution order (env var beats config — standard credential precedence):
+      1. OCTOPODA_API_KEY environment variable
+      2. ~/.octopoda/config.json (set by `octopoda login`)
+      3. empty string (triggers interactive signup if TTY)
+
+    Fix 2026-05-21: previously config took precedence which meant users who
+    logged in interactively couldn't override their stored credentials with
+    an env var. Env var now wins, which matches how AWS / Stripe / GCP SDKs
+    behave.
+    """
+    env_key = os.environ.get("OCTOPODA_API_KEY", "").strip()
+    if env_key:
+        return env_key
     config = _load_config()
-    return config.get("api_key", os.environ.get("OCTOPODA_API_KEY", ""))
+    return config.get("api_key", "")
 
 
 def get_api_url() -> str:

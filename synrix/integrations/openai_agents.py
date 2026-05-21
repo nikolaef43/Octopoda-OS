@@ -2,7 +2,7 @@
 Octopoda × OpenAI Agents SDK Integration
 ==========================================
 Persistent memory tools for OpenAI Agents.
-All memory is stored in the Octopoda Cloud API (api.octapodas.com).
+All memory is stored in the Octopoda Cloud API (api.octopodas.com).
 
 Setup:
     pip install octopoda[client] openai-agents

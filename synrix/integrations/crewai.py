@@ -2,7 +2,7 @@
 Octopoda × CrewAI Integration
 ===============================
 Persistent memory for CrewAI crews and agents.
-All memory is stored in the Octopoda Cloud API (api.octapodas.com).
+All memory is stored in the Octopoda Cloud API (api.octopodas.com).
 
 Setup:
     pip install octopoda[client] crewai

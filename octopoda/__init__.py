@@ -38,9 +38,19 @@ from synrix_runtime.config import SynrixConfig
 #        memory = LangChainMemory("my_agent")
 
 def _get_backend_auto():
-    """Auto-detect backend: cloud if API key set, local otherwise."""
-    import os
-    if os.environ.get("OCTOPODA_API_KEY", "").startswith("sk-octopoda-"):
+    """Auto-detect backend: cloud if API key set (env var OR config), local otherwise.
+
+    Fix 2026-05-21: now consults auth_flow.get_api_key so integration wrappers
+    (LangChainMemory, CrewAIMemory, etc.) also work for users who logged in via
+    `octopoda login` without setting the env var.
+    """
+    try:
+        from synrix_runtime.auth_flow import get_api_key
+        resolved = get_api_key()
+    except Exception:
+        import os
+        resolved = os.environ.get("OCTOPODA_API_KEY", "")
+    if resolved.startswith("sk-octopoda-"):
         return None  # Let integration use cloud
     # Local mode: create a local backend
     from synrix_runtime.api.runtime import AgentRuntime

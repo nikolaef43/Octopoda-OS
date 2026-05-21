@@ -2,7 +2,7 @@
 Octopoda × AutoGen Integration
 ================================
 Persistent memory for Microsoft AutoGen agents.
-All memory is stored in the Octopoda Cloud API (api.octapodas.com).
+All memory is stored in the Octopoda Cloud API (api.octopodas.com).
 
 Setup:
     pip install octopoda[client] pyautogen

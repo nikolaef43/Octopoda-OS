@@ -5,7 +5,7 @@ Python client for the Octopoda Agent Memory API.
 
     from synrix import Octopoda
 
-    client = Octopoda(api_key="sk-octopoda-...", base_url="https://api.octapodas.com")
+    client = Octopoda(api_key="sk-octopoda-...", base_url="https://api.octopodas.com")
     agent = client.agent("my-bot")
     agent.write("user:alice", {"name": "Alice", "score": 95})
     data = agent.read("user:alice")
@@ -524,11 +524,11 @@ class Octopoda:
 
     Args:
         api_key: Your API key (starts with sk-octopoda-)
-        base_url: API base URL (default: https://api.octapodas.com)
+        base_url: API base URL (default: https://api.octopodas.com)
         timeout: Request timeout in seconds (default: 30)
     """
 
-    def __init__(self, api_key: str = None, base_url: str = "https://api.octapodas.com", timeout: int = 30):
+    def __init__(self, api_key: str = None, base_url: str = "https://api.octopodas.com", timeout: int = 30):
         if api_key is None:
             api_key = os.environ.get("OCTOPODA_API_KEY", "")
         if not api_key:
